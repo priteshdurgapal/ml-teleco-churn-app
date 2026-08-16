@@ -38,15 +38,11 @@ All 5 models were trained on the same 80/20 stratified train-test split of the d
 
 | ML Model Name | Observation about model performance |
 |---|---|
-| Logistic Regression | Best all-around performer — highest AUC (0.842), F1 (0.609), and MCC (0.484). A linear model works well here because churn correlates fairly linearly with features like tenure, contract type, and monthly charges after encoding. |
+| Logistic Regression | ***Best all-around performer*** — highest AUC (0.842), F1 (0.609), and MCC (0.484). A linear model works well here because churn correlates fairly linearly with features like tenure, contract type, and monthly charges after encoding. |
 | Decision Tree | Weakest model on every metric (AUC 0.653, MCC 0.309). A single unpruned tree overfits the training data and generalizes poorly — this is the expected motivation for using an ensemble instead. |
-| kNN | Middling performance (AUC 0.772, MCC 0.342). Held back by the high-dimensional, sparse feature space created by one-hot encoding many categorical columns — distance metrics degrade in high dimensions ("curse of dimensionality"). |
+| kNN | ***Middling performance*** (AUC 0.772, MCC 0.342). Held back by the high-dimensional, sparse feature space created by one-hot encoding many categorical columns — distance metrics degrade in high dimensions ("curse of dimensionality"). |
 | Naive Bayes | Lowest accuracy (0.656) but by far the highest recall (0.866) — catches most actual churners at the cost of many false alarms (precision only 0.427). Whether this is "worse" depends on business priorities: missing a real churner is usually costlier than a false alarm, so this model's recall-heavy trade-off could be more business-valuable despite weaker balanced metrics. |
 | Random Forest (Ensemble) | Solid, well-rounded (AUC 0.828, MCC 0.440) — clearly improves over the single Decision Tree on every metric, demonstrating the value of ensembling many decorrelated trees to reduce overfitting. |
+| Overall Winner for the dataset | Logistic Regression — it leads on AUC, F1, and MCC simultaneously, which is a stronger claim than winning on any single metric. Plain Accuracy is unreliable here since the dataset is imbalanced (~27% churn); AUC, F1, and MCC all hold up better under imbalance, and Logistic Regression tops all three. |
 
-### Overall Winner for your dataset?
-
-**Logistic Regression** — it leads on AUC, F1, and MCC simultaneously, which is a stronger claim than winning on any single metric. Plain Accuracy is unreliable here since the dataset is imbalanced (~27% churn); AUC, F1, and MCC all hold up better under imbalance, and Logistic Regression tops all three.
-
-Caveat: if the business priority is *catching as many churners as possible* even at the cost of false positives, **Naive Bayes** is the more defensible pick despite its lower overall scores — the "right" model depends on which mistake (missing a churner vs. a false alarm) is more costly in practice, not just which one wins on paper.
 

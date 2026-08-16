@@ -82,6 +82,32 @@ def to_display_df(metrics_dict):
     return df
 
 
+def get_col(df: pd.DataFrame, keyword: str):
+    return next((c for c in df.columns if keyword in c), None)
+
+
+def compute_overall_winner(df: pd.DataFrame):
+    """Rank models by AUC + F1 + MCC combined (most reliable trio under class imbalance).
+    Returns (winner_name, winner_idx, recall_leader_name_or_None)."""
+    auc_col, f1_col, mcc_col = get_col(df, 'AUC'), get_col(df, 'F1'), get_col(df, 'MCC')
+    if not all([auc_col, f1_col, mcc_col]):
+        return None, None, None
+
+    ranks = df[[auc_col, f1_col, mcc_col]].rank(ascending=False)
+    avg_rank = ranks.mean(axis=1)
+    winner_idx = avg_rank.idxmin()
+    winner_name = df.loc[winner_idx, 'ML Model Name']
+
+    recall_col = get_col(df, 'Recall')
+    recall_leader_name = None
+    if recall_col is not None:
+        recall_idx = df[recall_col].idxmax()
+        if recall_idx != winner_idx:
+            recall_leader_name = df.loc[recall_idx, 'ML Model Name']
+
+    return winner_name, winner_idx, recall_leader_name
+
+
 def show_metrics_table_with_best(df: pd.DataFrame):
     """Render a metrics table with the best model (by F1) highlighted, computed live from df."""
     f1_col = next((c for c in df.columns if 'F1' in c), None)
@@ -102,7 +128,19 @@ def show_metrics_table_with_best(df: pd.DataFrame):
         use_container_width=True,
         hide_index=True,
     )
-    st.info(f"**Best model by {f1_col}:** {best_name} ({best_score:.4f})")
+
+
+def show_overall_winner(df: pd.DataFrame):
+    """Dynamic 'Overall Winner' narrative — same logic as the README, computed live from df."""
+    winner_name, winner_idx, recall_leader_name = compute_overall_winner(df)
+    if winner_name is None:
+        return
+    st.markdown("**Overall Winner for this dataset**")
+    st.success(
+        f"**{winner_name}** — leads across AUC, F1, and MCC combined, the metrics most "
+        f"reliable under class imbalance (plain Accuracy can be misleading here)."
+    )
+
 
 
 # ---------------------------------------------------------------
@@ -169,6 +207,11 @@ if test_raw is not None:
     y_pred = selected_model.predict(X_scaled)
     y_proba = selected_model.predict_proba(X_scaled)[:, 1]
 
+    # Compute all-models metrics now so we can flag the overall winner in the header below
+    uploaded_result = compute_all_metrics(test_raw, _models_key=",".join(models.keys()))
+    uploaded_df = to_display_df(uploaded_result)
+    uploaded_winner_name, _, _ = compute_overall_winner(uploaded_df)
+
     # --- Selected model: metrics, confusion matrix, classification report ---
     st.subheader(f"Performance: {selected_model_name}")
     st.caption(f"Computed on uploaded file ({len(test_raw)} rows)")
@@ -186,7 +229,7 @@ if test_raw is not None:
         st.markdown("**Confusion Matrix**")
         fig_cm, ax_cm = plt.subplots(figsize=(4.5, 4.5))
         cm = confusion_matrix(y_true, y_pred)
-        ConfusionMatrixDisplay(cm, display_labels=[0, 1]).plot(ax=ax_cm, cmap='Blues', colorbar=True)
+        ConfusionMatrixDisplay(cm, display_labels=[0, 1]).plot(ax=ax_cm, cmap='Blues', colorbar=False)
         st.pyplot(fig_cm)
 
     with c2:
@@ -202,14 +245,22 @@ if test_raw is not None:
 
     # --- All-models metrics table for the uploaded data ---
     st.subheader("Metrics on Uploaded Test Data")
-    uploaded_result = compute_all_metrics(test_raw, _models_key=",".join(models.keys()))
-    show_metrics_table_with_best(to_display_df(uploaded_result))
+    show_metrics_table_with_best(uploaded_df)
+    show_overall_winner(uploaded_df)
 
     st.markdown("---")
 else:
     st.info("Download the sample CSV from the sidebar, then upload it back to see the model predictions.")    
 
-# --- Pre-computed metrics — always shown, at the bottom once data is uploaded ---
-st.subheader("Pre-computed Metrics")
+# --- Pre-computed metrics: full section when no upload, collapsible once data is uploaded ---
 precomputed_df = to_display_df(precomputed_metrics)
-show_metrics_table_with_best(precomputed_df)
+
+if test_raw is None:
+    st.subheader("Pre-computed Metrics")
+    show_metrics_table_with_best(precomputed_df)
+    show_overall_winner(precomputed_df)
+else:
+    st.subheader("Pre-computed Metrics")
+    with st.expander("(Expand)", expanded=False):
+        show_metrics_table_with_best(precomputed_df)
+        show_overall_winner(precomputed_df)
