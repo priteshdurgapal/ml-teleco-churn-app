@@ -112,7 +112,7 @@ def show_metrics_table_with_best(df: pd.DataFrame):
     """Render a metrics table with the best model (by F1) highlighted, computed live from df."""
     f1_col = next((c for c in df.columns if 'F1' in c), None)
     if f1_col is None:
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(df, width='stretch', hide_index=True)
         return
 
     best_idx = df[f1_col].idxmax()
@@ -125,7 +125,7 @@ def show_metrics_table_with_best(df: pd.DataFrame):
 
     st.dataframe(
         df.style.apply(highlight_best, axis=1),
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
     )
 
@@ -198,7 +198,7 @@ if test_raw is not None:
     # --- Data preview — only shown once a file has been uploaded ---
     st.subheader("Data Preview")
     st.caption(f"First rows of uploaded file ({len(test_raw)} rows total)")
-    st.dataframe(test_raw.head(9), use_container_width=True)
+    st.dataframe(test_raw.head(9), width='stretch')
     st.markdown("---")
 
     selected_model = models[selected_model_name]
@@ -239,11 +239,11 @@ if test_raw is not None:
             output_dict=True, zero_division=0,
         )
         report_df = pd.DataFrame(report_dict).T.round(4)
-        st.dataframe(report_df, use_container_width=True)
+        st.dataframe(report_df, width='stretch')
 
     st.markdown("---")
 
-    # --- All-models metrics table for the uploaded data ---
+    # --- All-models metrics table for the uploaded data  ---
     st.subheader("Metrics on Uploaded Test Data")
     show_metrics_table_with_best(uploaded_df)
     show_overall_winner(uploaded_df)
